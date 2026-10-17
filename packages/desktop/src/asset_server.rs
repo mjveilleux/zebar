@@ -17,8 +17,15 @@ use uuid::Uuid;
 
 use crate::common::{glob_util, PathExt};
 
-/// Port for the localhost asset server.
-const ASSET_SERVER_PORT: u16 = 6124;
+/// Port for the localhost asset server: `ZEBAR_ASSET_PORT` when set, else
+/// 6124. Windows accounts signed in at once each run their own Zebar, and a
+/// localhost port is shared by all of them, so each account sets its own.
+pub fn asset_server_port() -> u16 {
+  std::env::var("ZEBAR_ASSET_PORT")
+    .ok()
+    .and_then(|port| port.trim().parse().ok())
+    .unwrap_or(6124)
+}
 
 /// Map of tokens to their corresponding path and file patterns.
 static ASSET_SERVER_TOKENS: LazyLock<Mutex<HashMap<String, TokenAccess>>> =
@@ -37,7 +44,7 @@ struct TokenAccess {
 pub async fn setup_asset_server() -> anyhow::Result<()> {
   let rocket = rocket::build()
     .configure(
-      rocket::Config::figment().merge(("port", ASSET_SERVER_PORT)),
+      rocket::Config::figment().merge(("port", asset_server_port())),
     )
     .mount("/", routes![sw_js, normalize_css, init, serve]);
 
@@ -71,7 +78,7 @@ pub async fn create_init_url(
   );
 
   let url = tauri::Url::parse_with_params(
-    &format!("http://127.0.0.1:{}/__zebar/init", ASSET_SERVER_PORT),
+    &format!("http://127.0.0.1:{}/__zebar/init", asset_server_port()),
     &[("token", &token), ("redirect", &redirect)],
   )?;
 

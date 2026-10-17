@@ -11,7 +11,24 @@ setInterval(
   1000 * 60 * 15,
 );
 
-if (window.location.host === '127.0.0.1:6124') {
+// GlazeWM's port is this account's own (GLAZEWM_IPC_PORT), but the glazewm
+// client widgets use always dials 6123: point it here.
+if (window.__GLAZEWM_IPC_PORT && window.__GLAZEWM_IPC_PORT !== 6123) {
+  const NativeWebSocket = window.WebSocket;
+  window.WebSocket = class extends NativeWebSocket {
+    constructor(url, protocols) {
+      super(
+        String(url).replace(
+          /^(wss?:\/\/(?:localhost|127\.0\.0\.1)):6123(?=\/|$)/,
+          `$1:${window.__GLAZEWM_IPC_PORT}`,
+        ),
+        protocols,
+      );
+    }
+  };
+}
+
+if (window.location.host === `127.0.0.1:${window.__ZEBAR_ASSET_PORT}`) {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/__zebar/sw.js', { scope: '/' })

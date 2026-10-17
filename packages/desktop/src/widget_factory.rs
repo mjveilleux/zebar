@@ -600,9 +600,21 @@ impl WidgetFactory {
     let state_script =
       format!("window.__ZEBAR_STATE={};", serde_json::to_string(state)?);
 
+    // This account's ports (see asset_server_port): the script below uses
+    // them, and points widgets' GlazeWM client at GLAZEWM_IPC_PORT.
+    let glazewm_port = std::env::var("GLAZEWM_IPC_PORT")
+      .ok()
+      .and_then(|port| port.trim().parse::<u16>().ok())
+      .unwrap_or(6123);
+    let ports_script = format!(
+      "window.__ZEBAR_ASSET_PORT={};window.__GLAZEWM_IPC_PORT={};",
+      crate::asset_server::asset_server_port(),
+      glazewm_port
+    );
+
     let sw_script = include_str!("../resources/initialization-script.js");
 
-    Ok(format!("{state_script}\n{sw_script}"))
+    Ok(format!("{state_script}\n{ports_script}\n{sw_script}"))
   }
 
   /// Registers window events for a given widget.
